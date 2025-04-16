@@ -74,15 +74,14 @@ export default function HomePage() {
                 </h3>
                 <div className="px-4 text-center text-lg text-gray-400">
                   <a
-                    href="https://github.com/langmanus/langmanus"
+                    href="https://github.com/krishna22112023/generative-ai-agentic-cv-frontend"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline hover:text-blue-600"
                   >
-                    LangManus
+                    AgenticVision
                   </a>
-                  , built on cutting-edge language models, helps you search on
-                  web, browse information, and handle complex tasks.
+                  , built on cutting-edge language models, helps you build CV models from data to production
                 </div>
               </div>
             )}

@@ -3,10 +3,10 @@ export function AppHeader() {
     <div>
       <a
         className="font-serif text-lg font-extralight text-gray-500"
-        href="https://github.com/langmanus/langmanus"
+        href="https://github.com/krishna22112023/generative-ai-agentic-cv-frontend"
         target="_blank"
       >
-        LangManus
+        AgenticVision
       </a>
     </div>
   );

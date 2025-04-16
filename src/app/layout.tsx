@@ -4,9 +4,9 @@ import { type Metadata } from "next";
 import "~/styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "🦜🤖 LangManus",
+  title: "🦜🤖 AgenticVision",
   description:
-    "A community-driven AI automation framework that builds upon the incredible work of the open source community.",
+    "An agentic automation framework to build CV models in production",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
