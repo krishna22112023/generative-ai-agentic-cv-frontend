@@ -49,7 +49,7 @@ git clone https://github.com/krishna22112023/generative-ai-agentic-cv-frontend
 cd generative-ai-agentic-cv-frontend
 
 # Install dependencies
-pnpm install
+pnpm install 
 
 # Run the project in development mode
 pnpm dev
