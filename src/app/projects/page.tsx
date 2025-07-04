@@ -1,10 +1,12 @@
 "use client";
 
+import React from "react";
 import { useState, useEffect } from "react";
 import { Button } from "~/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
 import { AppHeader } from "../_components/AppHeader";
+import { Upload, Pencil } from "lucide-react";
 
 interface Project {
   id: string;
@@ -87,7 +89,45 @@ export default function ProjectsPage() {
   const [verifyError, setVerifyError] = useState<string | null>(null);
   const [verified, setVerified] = useState(false);
 
-  const addProject = async () => {
+  // Editing / upload state
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadProject, setUploadProject] = useState<Project | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) setSelectedFiles(Array.from(e.target.files));
+  };
+
+  const closeUpload = () => {
+    setShowUploadModal(false);
+    setUploadProject(null);
+    setSelectedFiles([]);
+  };
+
+  const startUpload = async () => {
+    if (!uploadProject || selectedFiles.length === 0) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("projectId", uploadProject.id);
+      selectedFiles.forEach((f) => fd.append("files", f));
+      const res = await fetch("/api/minio/upload", { method: "POST", body: fd });
+      if (res.ok) {
+        const data = await res.json();
+        // update projects list locally
+        setProjects((prev) => prev.map((p) => p.id === uploadProject.id ? { ...p, number_of_files: (p.number_of_files ?? 0) + data.uploaded } : p));
+        closeUpload();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const saveProject = async () => {
     if (!form.name.trim()) return;
     if (!verified || !form.bucket) return;
 
@@ -105,18 +145,39 @@ export default function ProjectsPage() {
     };
 
     try {
-      const res = await fetch("/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        const created: Project = await res.json();
-        setProjects([...projects, created]);
-        setShowModal(false);
+      let res: Response;
+      let project: Project;
+      if (editingProject) {
+        // update
+        res = await fetch(`/api/projects/${editingProject.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          project = (await res.json()) as Project;
+          setProjects(projects.map((p) => (p.id === project.id ? project : p)));
+        }
       } else {
-        console.error("Failed to create project");
+        // create
+        res = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          project = (await res.json()) as Project;
+          setProjects([...projects, project]);
+          // create prefix in bucket asynchronously
+          fetch("/api/minio/create-prefix", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ projectId: project.id }),
+          }).catch(console.error);
+        }
       }
+      setShowModal(false);
+      setEditingProject(null);
     } catch (e) {
       console.error(e);
     }
@@ -188,18 +249,55 @@ export default function ProjectsPage() {
                 height={80}
                 className="size-20 shrink-0 rounded object-cover"
               />
-              <div className="flex flex-col">
-                <h2 className="font-bold">{proj.project_name}</h2>
-                <span className="text-sm text-gray-500">Edited {timeAgo(new Date(proj.created_at))}</span>
-                <span className="text-sm text-gray-500">
-                  {proj.number_of_files} Files{proj.fps ? ` • ${proj.fps} FPS` : ""}
-                </span>
-                <span className="mt-1 flex items-center gap-1 text-sm">
-                  <span
-                    className={`size-2 rounded-full ${proj.bucket_name ? "bg-green-500" : "bg-red-500"}`}
-                  />
-                  {proj.bucket_name ? "connected" : "disconnected"}
-                </span>
+              <div className="relative flex flex-col">
+                <div className="absolute bottom-0 right-0 flex gap-1">
+                  <button
+                    className="rounded bg-white p-1 shadow hover:bg-gray-100"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setEditingProject(proj);
+                      setForm({
+                        name: proj.project_name,
+                        tags: proj.tags.join(";"),
+                        description: "",
+                        endpointURL: "",
+                        useSSL: true,
+                        accessKey: "",
+                        secretKey: "",
+                        bucket: proj.bucket_name,
+                      });
+                      setVerified(true);
+                      setShowModal(true);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    className="rounded bg-white p-1 shadow hover:bg-gray-100"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setUploadProject(proj);
+                      setShowUploadModal(true);
+                    }}
+                  >
+                    <Upload className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex flex-col">
+                  <h2 className="font-bold">{proj.project_name}</h2>
+                  <span className="text-sm text-gray-500">Edited {timeAgo(new Date(proj.created_at))}</span>
+                  <span className="text-sm text-gray-500">
+                    {proj.number_of_files} Files{proj.fps ? ` • ${proj.fps} FPS` : ""}
+                  </span>
+                  <span className="mt-1 flex items-center gap-1 text-sm">
+                    <span
+                      className={`size-2 rounded-full ${proj.bucket_name ? "bg-green-500" : "bg-red-500"}`}
+                    />
+                    {proj.bucket_name ? "connected" : "disconnected"}
+                  </span>
+                </div>
               </div>
             </Link>
           ))}
@@ -209,7 +307,7 @@ export default function ProjectsPage() {
         {showModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
             <div className="w-full max-w-xl rounded-lg bg-white p-6 shadow-lg">
-              <h3 className="mb-4 text-xl font-semibold">Let's create your project.</h3>
+              <h3 className="mb-4 text-xl font-semibold">{editingProject ? "Manage project" : "Let's create your project."}</h3>
               <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="flex flex-col">
                   <label htmlFor="name" className="mb-1 text-sm font-medium">
@@ -323,8 +421,30 @@ export default function ProjectsPage() {
                 <Button variant="ghost" onClick={() => setShowModal(false)}>
                   Cancel
                 </Button>
-                <Button onClick={addProject} disabled={!verified || !form.bucket}>
-                  Create Project
+                <Button onClick={saveProject} disabled={!verified || !form.bucket}>
+                  {editingProject ? "Save" : "Create Project"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showUploadModal && uploadProject && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+            <div className="w-full max-w-xl rounded-lg bg-white p-6 shadow-lg">
+              <h3 className="mb-4 text-xl font-semibold">Upload to {uploadProject.project_name}</h3>
+              <input type="file" multiple onChange={handleFileSelect} className="mb-4" />
+              {selectedFiles.length > 0 && (
+                <ul className="mb-4 max-h-40 overflow-y-auto rounded border p-2 text-sm">
+                  {selectedFiles.map((f) => (
+                    <li key={f.name}>{f.name}</li>
+                  ))}
+                </ul>
+              )}
+              <div className="flex justify-end gap-3">
+                <Button variant="ghost" onClick={closeUpload}>Cancel</Button>
+                <Button onClick={startUpload} disabled={uploading || selectedFiles.length === 0}>
+                  {uploading ? "Uploading..." : "Upload"}
                 </Button>
               </div>
             </div>
