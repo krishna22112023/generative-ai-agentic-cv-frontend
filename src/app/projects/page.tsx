@@ -9,9 +9,12 @@ import { AppHeader } from "../_components/AppHeader";
 interface Project {
   id: string;
   name: string;
+  tags: string;
+  description: string;
   edited: Date;
   images: number;
   models: number;
+  connected: boolean;
 }
 
 function timeAgo(date: Date): string {
@@ -65,22 +68,70 @@ export default function ProjectsPage() {
   }, []);
 
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: "", tags: "", description: "" });
+  const [form, setForm] = useState({
+    name: "",
+    tags: "",
+    description: "",
+    endpointURL: "",
+    useSSL: true,
+    accessKey: "",
+    secretKey: "",
+    bucket: "",
+  });
+
+  const [buckets, setBuckets] = useState<string[]>([]);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [verified, setVerified] = useState(false);
 
   const addProject = () => {
     if (!form.name.trim()) return;
+    if (!verified || !form.bucket) return;
     setProjects([
       ...projects,
       {
         id: crypto.randomUUID(),
         name: form.name.trim(),
+        tags: form.tags,
+        description: form.description,
         edited: new Date(),
         images: 0,
         models: 0,
+        connected: verified,
       },
     ]);
-    setForm({ name: "", tags: "", description: "" });
-    setShowModal(false);
+    setForm({ name: "", tags: "", description: "", endpointURL: "", useSSL: true, accessKey: "", secretKey: "", bucket: "" });
+    setVerified(false);
+  };
+
+  const verifyStorage = async () => {
+    setVerifying(true);
+    setVerifyError(null);
+    try {
+      const res = await fetch("/api/minio/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          endpointURL: form.endpointURL,
+          useSSL: form.useSSL,
+          accessKey: form.accessKey,
+          secretKey: form.secretKey,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBuckets(data.buckets as string[]);
+        setVerified(true);
+      } else {
+        setVerifyError(data.error ?? "Verification failed");
+        setVerified(false);
+      }
+    } catch (e) {
+      setVerifyError(String(e));
+      setVerified(false);
+    } finally {
+      setVerifying(false);
+    }
   };
 
   return (
@@ -117,6 +168,12 @@ export default function ProjectsPage() {
                 <span className="text-sm text-gray-500">Edited {timeAgo(proj.edited)}</span>
                 <span className="text-sm text-gray-500">
                   {proj.images} Images{proj.models ? ` • ${proj.models} Models` : ""}
+                </span>
+                <span className="mt-1 flex items-center gap-1 text-sm">
+                  <span
+                    className={`size-2 rounded-full ${proj.connected ? "bg-green-500" : "bg-red-500"}`}
+                  />
+                  {proj.connected ? "connected" : "disconnected"}
                 </span>
               </div>
             </Link>
@@ -169,11 +226,81 @@ export default function ProjectsPage() {
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                 />
               </div>
+              {/* Storage Config */}
+              <div className="mb-6 border-t pt-4">
+                <h4 className="mb-4 text-lg font-medium">Storage Configuration</h4>
+                <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="flex flex-col">
+                    <label className="mb-1 text-sm font-medium">Endpoint URL</label>
+                    <input
+                      type="text"
+                      placeholder="https://play.min.io:9000"
+                      className="rounded border px-3 py-2 text-sm placeholder-gray-400"
+                      value={form.endpointURL}
+                      onChange={(e) => setForm({ ...form, endpointURL: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 pt-6">
+                    <input
+                      id="ssl"
+                      type="checkbox"
+                      checked={form.useSSL}
+                      onChange={(e) => setForm({ ...form, useSSL: e.target.checked })}
+                    />
+                    <label htmlFor="ssl" className="text-sm">Use SSL</label>
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="mb-1 text-sm font-medium">Access Key</label>
+                    <input
+                      type="password"
+                      placeholder="Access Key"
+                      className="rounded border px-3 py-2 text-sm placeholder-gray-400"
+                      value={form.accessKey}
+                      onChange={(e) => setForm({ ...form, accessKey: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="mb-1 text-sm font-medium">Secret Key</label>
+                    <input
+                      type="password"
+                      placeholder="Secret Key"
+                      className="rounded border px-3 py-2 text-sm placeholder-gray-400"
+                      value={form.secretKey}
+                      onChange={(e) => setForm({ ...form, secretKey: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="mb-4 flex items-center gap-3">
+                  <Button size="sm" onClick={verifyStorage} disabled={verifying}>
+                    {verifying ? "Verifying..." : "Verify"}
+                  </Button>
+                  {verifyError && <span className="text-sm text-red-500">{verifyError}</span>}
+                </div>
+                {buckets.length > 0 && (
+                  <div className="mb-4 flex flex-col">
+                    <label className="mb-1 text-sm font-medium">Bucket</label>
+                    <select
+                      className="rounded border px-3 py-2 text-sm"
+                      value={form.bucket}
+                      onChange={(e) => setForm({ ...form, bucket: e.target.value })}
+                    >
+                      <option value="">Select bucket...</option>
+                      {buckets.map((b) => (
+                        <option key={b} value={b}>
+                          {b}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
               <div className="flex justify-end gap-3">
                 <Button variant="ghost" onClick={() => setShowModal(false)}>
                   Cancel
                 </Button>
-                <Button onClick={addProject}>Create Project</Button>
+                <Button onClick={addProject} disabled={!verified || !form.bucket}>
+                  Create Project
+                </Button>
               </div>
             </div>
           </div>
