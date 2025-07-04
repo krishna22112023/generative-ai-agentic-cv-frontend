@@ -8,13 +8,13 @@ import { AppHeader } from "../_components/AppHeader";
 
 interface Project {
   id: string;
-  name: string;
-  tags: string;
-  description: string;
-  edited: Date;
-  images: number;
-  models: number;
-  connected: boolean;
+  project_name: string;
+  tags: string[];
+  number_of_files: number | null;
+  extensions: string[] | null;
+  fps: number | null;
+  bucket_name: string;
+  created_at: string; // ISO string
 }
 
 function timeAgo(date: Date): string {
@@ -54,17 +54,20 @@ function timeAgo(date: Date): string {
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
 
-  // load projects from localStorage on mount
+  // load projects from API on mount
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = localStorage.getItem("projects");
-    if (stored) {
-      const parsed: Project[] = (JSON.parse(stored) as Project[]).map((p: Project) => ({
-        ...p,
-        edited: new Date(p.edited),
-      }));
-      setProjects(parsed);
-    }
+    const load = async () => {
+      try {
+        const res = await fetch("/api/projects");
+        if (res.ok) {
+          const data: Project[] = await res.json();
+          setProjects(data);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    load();
   }, []);
 
   const [showModal, setShowModal] = useState(false);
@@ -84,24 +87,39 @@ export default function ProjectsPage() {
   const [verifyError, setVerifyError] = useState<string | null>(null);
   const [verified, setVerified] = useState(false);
 
-  const addProject = () => {
+  const addProject = async () => {
     if (!form.name.trim()) return;
     if (!verified || !form.bucket) return;
-    setProjects([
-      ...projects,
-      {
-        id: crypto.randomUUID(),
-        name: form.name.trim(),
-        tags: form.tags,
-        description: form.description,
-        edited: new Date(),
-        images: 0,
-        models: 0,
-        connected: verified,
-      },
-    ]);
-    setForm({ name: "", tags: "", description: "", endpointURL: "", useSSL: true, accessKey: "", secretKey: "", bucket: "" });
-    setVerified(false);
+
+    const payload = {
+      project_name: form.name.trim(),
+      tags: form.tags.split(";").map((t) => t.trim()).filter(Boolean),
+      number_of_files: 0,
+      extensions: [],
+      fps: null,
+      object_storage: "minio" as const,
+      MINIO_ACCESS_KEY: form.accessKey,
+      MINIO_SECRET_KEY: form.secretKey,
+      MINIO_ENDPOINT_URL: form.endpointURL,
+      bucket_name: form.bucket,
+    };
+
+    try {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const created: Project = await res.json();
+        setProjects([...projects, created]);
+        setShowModal(false);
+      } else {
+        console.error("Failed to create project");
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const verifyStorage = async () => {
@@ -153,8 +171,15 @@ export default function ProjectsPage() {
           {projects.map((proj) => (
             <Link
               key={proj.id}
-              href="/"
+              href={{ pathname: "/", query: { projectId: proj.id } }}
               className="flex cursor-pointer gap-4 rounded-lg border p-4 shadow-sm hover:shadow-md"
+              onClick={() => {
+                fetch("/api/active-project", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ projectId: proj.id }),
+                }).catch(console.error);
+              }}
             >
               <Image
                 src="/thumbnail.png"
@@ -164,16 +189,16 @@ export default function ProjectsPage() {
                 className="size-20 shrink-0 rounded object-cover"
               />
               <div className="flex flex-col">
-                <h2 className="font-bold">{proj.name}</h2>
-                <span className="text-sm text-gray-500">Edited {timeAgo(proj.edited)}</span>
+                <h2 className="font-bold">{proj.project_name}</h2>
+                <span className="text-sm text-gray-500">Edited {timeAgo(new Date(proj.created_at))}</span>
                 <span className="text-sm text-gray-500">
-                  {proj.images} Images{proj.models ? ` • ${proj.models} Models` : ""}
+                  {proj.number_of_files} Files{proj.fps ? ` • ${proj.fps} FPS` : ""}
                 </span>
                 <span className="mt-1 flex items-center gap-1 text-sm">
                   <span
-                    className={`size-2 rounded-full ${proj.connected ? "bg-green-500" : "bg-red-500"}`}
+                    className={`size-2 rounded-full ${proj.bucket_name ? "bg-green-500" : "bg-red-500"}`}
                   />
-                  {proj.connected ? "connected" : "disconnected"}
+                  {proj.bucket_name ? "connected" : "disconnected"}
                 </span>
               </div>
             </Link>

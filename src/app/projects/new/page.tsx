@@ -4,45 +4,56 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 
-interface Project {
-  id: string;
-  name: string;
-  tags: string;
-  description: string;
-  edited: Date;
-  images: number;
-  models: number;
-}
-
 export default function NewProjectPage() {
   const router = useRouter();
   const [form, setForm] = useState({ name: "", tags: "", description: "" });
 
   // If projects already exist, redirect to home
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = localStorage.getItem("projects");
-    if (stored && JSON.parse(stored).length > 0) {
-      router.replace("/");
-    }
+    const check = async () => {
+      try {
+        const res = await fetch("/api/projects");
+        if (res.ok) {
+          const list = await res.json();
+          if (Array.isArray(list) && list.length > 0) {
+            router.replace("/");
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    check();
   }, [router]);
 
-  const saveProject = () => {
+  const saveProject = async () => {
     if (!form.name.trim()) return;
-    const newProject: Project = {
-      id: crypto.randomUUID(),
-      name: form.name.trim(),
-      tags: form.tags.trim(),
-      description: form.description.trim(),
-      edited: new Date(),
-      images: 0,
-      models: 0,
+
+    const payload = {
+      project_name: form.name.trim(),
+      tags: form.tags.split(";").map((t) => t.trim()).filter(Boolean),
+      number_of_files: 0,
+      extensions: [],
+      fps: null,
+      object_storage: "minio" as const,
+      MINIO_ACCESS_KEY: "", // optional at this step
+      MINIO_SECRET_KEY: "",
+      MINIO_ENDPOINT_URL: "",
+      bucket_name: "",
     };
-    const stored = localStorage.getItem("projects");
-    const list: Project[] = stored ? JSON.parse(stored) : [];
-    list.push(newProject);
-    localStorage.setItem("projects", JSON.stringify(list));
-    router.replace("/");
+
+    try {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        router.replace("/");
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (

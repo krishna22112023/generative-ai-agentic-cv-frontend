@@ -51,11 +51,20 @@ function ChatPage() {
   // Redirect to create project if none exist
   const router = useRouter();
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = localStorage.getItem("projects");
-    if (!stored || JSON.parse(stored).length === 0) {
-      router.replace("/projects");
-    }
+    const checkProjects = async () => {
+      try {
+        const res = await fetch("/api/projects");
+        if (res.ok) {
+          const list = (await res.json()) as unknown[];
+          if (list.length === 0) {
+            router.replace("/projects");
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    checkProjects();
   }, [router]);
 
   return (
