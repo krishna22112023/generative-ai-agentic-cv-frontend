@@ -1,7 +1,10 @@
 "use client";
 
+import { SignedIn, SignedOut } from "@clerk/clerk-react";
+import Landing from "./_components/Landing";
 import { nanoid } from "nanoid";
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 import { useAutoScrollToBottom } from "~/components/hooks/useAutoScrollToBottom";
 import { ScrollArea } from "~/components/ui/scroll-area";
@@ -13,7 +16,7 @@ import { AppHeader } from "./_components/AppHeader";
 import { InputBox } from "./_components/InputBox";
 import { MessageHistoryView } from "./_components/MessageHistoryView";
 
-export default function HomePage() {
+function ChatPage() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -44,6 +47,16 @@ export default function HomePage() {
 
   useInitTeamMembers();
   useAutoScrollToBottom(scrollAreaRef, responding);
+
+  // Redirect to create project if none exist
+  const router = useRouter();
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem("projects");
+    if (!stored || JSON.parse(stored).length === 0) {
+      router.replace("/projects");
+    }
+  }, [router]);
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -101,5 +114,18 @@ export default function HomePage() {
         </div>
       </ScrollArea>
     </TooltipProvider>
+  );
+}
+
+export default function Home() {
+  return (
+    <>
+      <SignedOut>
+        <Landing />
+      </SignedOut>
+      <SignedIn>
+        <ChatPage />
+      </SignedIn>
+    </>
   );
 }
