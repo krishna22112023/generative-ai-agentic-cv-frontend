@@ -1,27 +1,19 @@
 import {
   ArrowUpOutlined,
   GlobalOutlined,
-  RobotOutlined,
 } from "@ant-design/icons";
-import { type KeyboardEvent, useCallback, useEffect, useState } from "react";
+import { type KeyboardEvent, useCallback, useEffect, useState, useRef } from "react";
 
 import { Button } from "~/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { Atom } from "~/core/icons";
-import { setEnabledTeamMembers, useStore } from "~/core/store";
 import { cn } from "~/core/utils";
+import { Upload as UploadIcon } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 export function InputBox({
   className,
@@ -39,13 +31,17 @@ export function InputBox({
   ) => void;
   onCancel?: () => void;
 }) {
-  const teamMembers = useStore((state) => state.teamMembers);
-  const enabledTeamMembers = useStore((state) => state.enabledTeamMembers);
-
   const [message, setMessage] = useState("");
   const [deepThinkingMode, setDeepThinkMode] = useState(false);
   const [searchBeforePlanning, setSearchBeforePlanning] = useState(false);
   const [imeStatus, setImeStatus] = useState<"active" | "inactive">("inactive");
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("projectId");
 
   const saveConfig = useCallback(() => {
     localStorage.setItem(
@@ -107,6 +103,34 @@ export function InputBox({
     saveConfig();
   }, [deepThinkingMode, searchBeforePlanning, saveConfig]);
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setSelectedFiles(Array.from(e.target.files));
+    }
+  };
+
+  const closeUpload = () => {
+    setShowUploadModal(false);
+    setSelectedFiles([]);
+  };
+
+  const startUpload = async () => {
+    if (!projectId || selectedFiles.length === 0) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("projectId", projectId);
+      selectedFiles.forEach((f) => fd.append("files", f));
+      await fetch("/api/minio/upload", { method: "POST", body: fd });
+      // TODO: could show a toast on success
+      closeUpload();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className={cn(className)}>
       <div className="w-full">
@@ -128,58 +152,23 @@ export function InputBox({
       <div className="flex items-center px-4 py-2">
         <div className="flex grow items-center gap-2">
           <Tooltip>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn("rounded-2xl px-4 text-sm", {
-                      "border-blue-300 bg-blue-100 text-blue-500 hover:bg-blue-200 hover:text-blue-600":
-                        true,
-                    })}
-                  >
-                    <RobotOutlined className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56">
-                <DropdownMenuLabel>Agents</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {teamMembers.map((member) => (
-                  <Tooltip key={member.name}>
-                    <TooltipTrigger asChild>
-                      <DropdownMenuCheckboxItem
-                        key={member.name}
-                        disabled={!member.is_optional}
-                        checked={enabledTeamMembers.includes(member.name)}
-                        onCheckedChange={() => {
-                          setEnabledTeamMembers(
-                            enabledTeamMembers.includes(member.name)
-                              ? enabledTeamMembers.filter(
-                                  (name) => name !== member.name,
-                                )
-                              : [...enabledTeamMembers, member.name],
-                          );
-                        }}
-                      >
-                        {member.name.charAt(0).toUpperCase() +
-                          member.name.slice(1)}
-                        {member.is_optional && (
-                          <span className="text-xs text-gray-400">
-                            (Optional)
-                          </span>
-                        )}
-                      </DropdownMenuCheckboxItem>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      <p>{member.desc}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                className="rounded-2xl px-4 text-sm border-blue-300 bg-blue-100 text-blue-500 hover:bg-blue-200 hover:text-blue-600"
+                onClick={() => {
+                  if (!projectId) {
+                    alert("Please select a project first.");
+                    return;
+                  }
+                  setShowUploadModal(true);
+                }}
+              >
+                <UploadIcon className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
             <TooltipContent>
-              <p>Enable or disable agents</p>
+              <p>Upload files/folders</p>
             </TooltipContent>
           </Tooltip>
           <Tooltip>
@@ -230,6 +219,21 @@ export function InputBox({
               <p>Search before planning</p>
             </TooltipContent>
           </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                disabled
+                className="rounded-2xl px-4 text-sm cursor-default border-green-300 bg-green-100 text-green-600"
+              >
+                <span className="mr-2 size-2 rounded-full bg-green-600" />
+                minio
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Connected data source</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Tooltip>
@@ -258,6 +262,35 @@ export function InputBox({
           </Tooltip>
         </div>
       </div>
+      {showUploadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="w-full max-w-xl rounded-lg bg-white p-6 shadow-lg">
+            <h3 className="mb-4 text-xl font-semibold">Upload Files</h3>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileSelect}
+              className="mb-4"
+            />
+            {selectedFiles.length > 0 && (
+              <ul className="mb-4 max-h-40 overflow-y-auto rounded border p-2 text-sm">
+                {selectedFiles.map((f) => (
+                  <li key={f.name}>{f.name}</li>
+                ))}
+              </ul>
+            )}
+            <div className="flex justify-end gap-3">
+              <Button variant="ghost" onClick={closeUpload} disabled={uploading}>
+                Cancel
+              </Button>
+              <Button onClick={startUpload} disabled={uploading || selectedFiles.length === 0}>
+                {uploading ? "Uploading..." : "Upload"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
