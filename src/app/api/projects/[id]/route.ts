@@ -15,9 +15,10 @@ const updateSchema = z.object({
   bucket_name: z.string().optional(),
 });
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { rows } = await query(`SELECT * FROM projects WHERE id = $1 LIMIT 1`, [params.id]);
+    const { id } = await context.params;
+    const { rows } = await query(`SELECT * FROM projects WHERE id = $1 LIMIT 1`, [id]);
     if (rows.length === 0) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
@@ -28,7 +29,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const json = await req.json();
     const parsed = updateSchema.safeParse(json);
@@ -42,9 +43,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const setClauses = keys.map((k, i) => `${camelToSnake(k)} = $${i + 1}`).join(", ");
     const values = keys.map((k) => (parsed.data as Record<string, unknown>)[k]);
 
+    const { id } = await context.params;
     const { rows } = await query(
       `UPDATE projects SET ${setClauses} WHERE id = $${keys.length + 1} RETURNING *`,
-      [...values, params.id],
+      [...values, id],
     );
     return NextResponse.json(rows[0]);
   } catch (err) {

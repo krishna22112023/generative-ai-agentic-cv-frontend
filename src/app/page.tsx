@@ -3,8 +3,9 @@
 import { SignedIn, SignedOut } from "@clerk/clerk-react";
 import Landing from "./_components/Landing";
 import { nanoid } from "nanoid";
-import { useCallback, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useRef, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Menu as MenuIcon } from "lucide-react";
 
 import { useAutoScrollToBottom } from "~/components/hooks/useAutoScrollToBottom";
 import { ScrollArea } from "~/components/ui/scroll-area";
@@ -15,13 +16,20 @@ import { cn } from "~/core/utils";
 import { AppHeader } from "./_components/AppHeader";
 import { InputBox } from "./_components/InputBox";
 import { MessageHistoryView } from "./_components/MessageHistoryView";
+import { SideMenu } from "./_components/SideMenu";
 
 function ChatPage() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [project, setProject] = useState<{ id: string; project_name: string; description?: string } | null>(null);
+
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const messages = useStore((state) => state.messages);
   const responding = useStore((state) => state.responding);
+
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("projectId");
 
   const handleSendMessage = useCallback(
     async (
@@ -67,11 +75,36 @@ function ChatPage() {
     checkProjects();
   }, [router]);
 
+  useEffect(() => {
+    if (!projectId) return;
+    fetch(`/api/projects/${projectId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setProject(data);
+      })
+      .catch(console.error);
+  }, [projectId]);
+
   return (
     <TooltipProvider delayDuration={150}>
+      {/* Overlay when sidebar open */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/30 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <SideMenu open={sidebarOpen} onClose={() => setSidebarOpen(false)} project={project} />
       <ScrollArea className="h-screen w-full" ref={scrollAreaRef}>
         <div className="flex min-h-screen flex-col items-center">
           <header className="sticky top-0 right-0 left-0 z-10 flex h-16 w-full items-center px-4 backdrop-blur-sm">
+            {/* Burger button */}
+            <button
+              className="mr-4 text-gray-700 hover:text-gray-900"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              <MenuIcon className="h-6 w-6" />
+            </button>
             <AppHeader />
           </header>
           <main className="w-full flex-1 px-4 pb-48">

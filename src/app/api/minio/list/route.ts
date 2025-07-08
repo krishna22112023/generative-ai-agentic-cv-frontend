@@ -6,6 +6,7 @@ import { query } from "~/lib/db";
 
 const bodySchema = z.object({
   projectId: z.string().uuid(),
+  folder: z.enum(["raw", "processed", "annotated"]).default("raw"),
 });
 
 export async function POST(req: NextRequest) {
@@ -15,19 +16,17 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
-    const { projectId } = parsed.data;
+    const { projectId, folder } = parsed.data;
 
     const { rows } = await query(
-      `SELECT project_name, minio_endpoint_url, minio_access_key, minio_secret_key, bucket_name, object_storage FROM projects WHERE id = $1 LIMIT 1`,
+      `SELECT project_name, minio_endpoint_url, minio_access_key, minio_secret_key, bucket_name, object_storage FROM projects WHERE id=$1 LIMIT 1`,
       [projectId],
     );
-    if (rows.length === 0) {
+    if (rows.length === 0)
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
     const project = rows[0] as any;
-    if (project.object_storage !== "minio") {
-      return NextResponse.json({ error: "Only minio storage supported" }, { status: 400 });
-    }
+    if (project.object_storage !== "minio")
+      return NextResponse.json({ error: "Storage not supported" }, { status: 400 });
 
     const url = new URL(project.minio_endpoint_url);
     const useSSL = url.protocol === "https:";
@@ -40,20 +39,20 @@ export async function POST(req: NextRequest) {
       secretKey: project.minio_secret_key,
     });
 
-    const base = `${project.project_name}/`;
-    const subfolders = ["raw/", "processed/", "annotated/"];
-    for (const sub of subfolders) {
-      const key = base + sub;
-      try {
-        await client.statObject(project.bucket_name, key);
-      } catch {
-        await client.putObject(project.bucket_name, key, Buffer.alloc(0));
-      }
+    const prefix = `${project.project_name}/${folder}/`;
+    const objectsStream = client.listObjectsV2(project.bucket_name, prefix, true);
+
+    const items: { key: string; url: string }[] = [];
+    for await (const obj of objectsStream) {
+      if (!obj) continue;
+      if (obj.name.endsWith("/")) continue; // skip folder marker
+      const presigned = await client.presignedGetObject(project.bucket_name, obj.name, 24 * 60 * 60);
+      items.push({ key: obj.name, url: presigned });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ items });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: "Failed to create prefix" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to list images" }, { status: 500 });
   }
-}
+} 

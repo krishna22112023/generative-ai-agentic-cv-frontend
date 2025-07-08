@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     secretKey: project.minio_secret_key,
   });
 
-  const prefix = `${project.project_name}/`;
+  const prefix = `${project.project_name}/raw/`;
   let uploaded = 0;
   const extSet: Set<string> = new Set(project.extensions ?? []);
 
