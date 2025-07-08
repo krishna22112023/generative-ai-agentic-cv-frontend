@@ -1,12 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-
-const Gallery = dynamic(() =>
-  import("react-grid-gallery").then((m) => m.Gallery), { ssr: false }
-);
 
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
@@ -66,12 +61,18 @@ export default function VisualizePage() {
         </Button>
       </div>
 
-      <Gallery
-        images={images}
-        margin={4}
-        rowHeight={220}
-        onClick={(index) => setLightboxIndex(index)}
-      />
+      {/* Simple responsive grid for images */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        {images.map((img, idx) => (
+          <img
+            key={idx}
+            src={img.src}
+            alt={`img-${idx}`}
+            className="h-48 w-full cursor-pointer object-cover"
+            onClick={() => setLightboxIndex(idx)}
+          />
+        ))}
+      </div>
 
       {lightboxIndex !== null && (
         <Lightbox
