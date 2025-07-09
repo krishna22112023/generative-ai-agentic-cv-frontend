@@ -20,7 +20,7 @@ import { SideMenu } from "./_components/SideMenu";
 
 function ChatPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [project, setProject] = useState<{ id: string; project_name: string; description?: string } | null>(null);
+  const [project, setProject] = useState<{ id: string; project_name: string; bucket_name?: string; description?: string } | null>(null);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -36,6 +36,7 @@ function ChatPage() {
       content: string,
       config: { deepThinkingMode: boolean; searchBeforePlanning: boolean },
     ) => {
+      if (!project) return; // ensure project loaded
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
       await sendMessage(
@@ -45,12 +46,18 @@ function ChatPage() {
           type: "text",
           content,
         },
-        config,
+        {
+          ...config,
+          projectId: project.id,
+          projectName: project.project_name,
+          versionId: searchParams.get("versionId"),
+          bucket: project.bucket_name ?? null,
+        },
         { abortSignal: abortController.signal },
       );
       abortControllerRef.current = null;
     },
-    [],
+    [project, searchParams],
   );
 
   useInitTeamMembers();

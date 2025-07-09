@@ -10,6 +10,7 @@ interface SideMenuProps {
   project: {
     id: string;
     project_name: string;
+    bucket_name?: string;
     description?: string;
   } | null;
 }
@@ -53,7 +54,37 @@ export function SideMenu({ open, onClose, project }: SideMenuProps) {
       </div>
       <hr className="border-gray-300" />
       <div className="p-4">
-        <h3 className="mb-3 text-sm font-bold text-gray-700">DATA</h3>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-gray-700">DATA</h3>
+          {project && (
+            <button
+              className="rounded bg-black px-2 py-1 text-xs font-semibold text-white"
+              onClick={async () => {
+                if (!project) return;
+                try {
+                  const res = await fetch(`/api/projects/${project.id}/versions`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      trigger: "manual",
+                      bucket_name: project.bucket_name ?? "",
+                      path: `${project.project_name}/raw/`,
+                    }),
+                  });
+                  if (res.ok) {
+                    const data = await res.json();
+                    // navigate to empty chat with new versionId
+                    window.location.href = `/?projectId=${project.id}&versionId=${data.id}`;
+                  }
+                } catch (err) {
+                  console.error(err);
+                }
+              }}
+            >
+              New
+            </button>
+          )}
+        </div>
         <div className="flex flex-col gap-2">
           {project ? (
             <Button variant="outline" className="w-full" onClick={onClose} asChild>
@@ -66,9 +97,17 @@ export function SideMenu({ open, onClose, project }: SideMenuProps) {
               Visualize
             </Button>
           )}
-          <Button variant="outline" className="w-full">
-            Versions
-          </Button>
+          {project ? (
+            <Button variant="outline" className="w-full" onClick={onClose} asChild>
+              <Link href={{ pathname: `/projects/${project.id}/versions`, query: { projectId: project.id } }}>
+                Versions
+              </Link>
+            </Button>
+          ) : (
+            <Button variant="outline" className="w-full" disabled>
+              Versions
+            </Button>
+          )}
           <Button variant="outline" className="w-full">
             Analytics
           </Button>

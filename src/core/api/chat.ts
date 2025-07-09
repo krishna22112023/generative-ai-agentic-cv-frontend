@@ -12,6 +12,10 @@ export function chatStream(
     deepThinkingMode: boolean;
     searchBeforePlanning: boolean;
     teamMembers: string[];
+    projectId: string;
+    projectName: string;
+    versionId: string | null;
+    bucket: string | null;
   },
   options: { abortSignal?: AbortSignal } = {},
 ) {
@@ -26,6 +30,12 @@ export function chatStream(
           location.search.includes("debug") &&
           !location.search.includes("debug=false"),
         team_members: params.teamMembers,
+        dataset: {
+          project_id: params.projectId,
+          version_id: params.versionId,
+          bucket_name: params.bucket,
+          path: `${params.projectName}/raw/`,
+        },
       }),
       signal: options.abortSignal,
     },

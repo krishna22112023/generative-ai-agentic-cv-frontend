@@ -88,6 +88,10 @@ export async function sendMessage(
   params: {
     deepThinkingMode: boolean;
     searchBeforePlanning: boolean;
+    projectId: string;
+    projectName: string;
+    versionId: string | null;
+    bucket: string | null;
   },
   options: { abortSignal?: AbortSignal } = {},
 ) {
@@ -100,8 +104,13 @@ export async function sendMessage(
       message,
       useStore.getState().state,
       {
-        ...params,
+        deepThinkingMode: params.deepThinkingMode,
+        searchBeforePlanning: params.searchBeforePlanning,
         teamMembers: useStore.getState().enabledTeamMembers,
+        projectId: params.projectId,
+        projectName: params.projectName,
+        versionId: params.versionId,
+        bucket: params.bucket,
       },
       options,
     );

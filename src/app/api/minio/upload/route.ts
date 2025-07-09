@@ -68,5 +68,20 @@ export async function POST(req: NextRequest) {
     [uploaded, Array.from(extSet), projectId],
   );
 
+  // create new dataset version triggered by upload
+  try {
+    await query(
+      `INSERT INTO project_versions (project_id, trigger, bucket_name, path) VALUES ($1,$2,$3,$4)`,
+      [
+        projectId,
+        "upload",
+        project.bucket_name,
+        `${project.project_name}/raw/`,
+      ],
+    );
+  } catch (err) {
+    console.error("Failed to record dataset version", err);
+  }
+
   return NextResponse.json({ success: true, uploaded });
 } 
