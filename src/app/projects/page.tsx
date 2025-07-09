@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { AppHeader } from "../_components/AppHeader";
 import { Upload, Pencil } from "lucide-react";
+import { McpToolsDialog } from "../_components/McpToolsDialog";
 
 interface Project {
   id: string;
@@ -88,6 +89,7 @@ export default function ProjectsPage() {
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState<string | null>(null);
   const [verified, setVerified] = useState(false);
+  const [showTools, setShowTools] = useState(false);
 
   // Editing / upload state
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -417,6 +419,14 @@ export default function ProjectsPage() {
                   </div>
                 )}
               </div>
+              {/* Tools Config */}
+              {verified && (
+                <div className="mb-4 flex justify-end">
+                  <Button variant="outline" onClick={() => setShowTools(true)}>
+                    Configure Tools
+                  </Button>
+                </div>
+              )}
               <div className="flex justify-end gap-3">
                 <Button variant="ghost" onClick={() => setShowModal(false)}>
                   Cancel
@@ -449,6 +459,9 @@ export default function ProjectsPage() {
               </div>
             </div>
           </div>
+        )}
+        {showTools && editingProject && (
+          <McpToolsDialog open={showTools} onClose={() => setShowTools(false)} projectId={editingProject.id} />
         )}
       </main>
     </div>

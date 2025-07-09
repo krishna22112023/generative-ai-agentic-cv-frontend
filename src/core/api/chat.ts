@@ -34,7 +34,7 @@ export function chatStream(
           project_id: params.projectId,
           version_id: params.versionId,
           bucket_name: params.bucket,
-          path: `${params.projectName}/raw/`,
+          project_name: params.projectName,
         },
       }),
       signal: options.abortSignal,

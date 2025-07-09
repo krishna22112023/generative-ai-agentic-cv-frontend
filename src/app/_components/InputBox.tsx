@@ -14,6 +14,8 @@ import { Atom } from "~/core/icons";
 import { cn } from "~/core/utils";
 import { Upload as UploadIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { McpToolsDialog } from "./McpToolsDialog";
+import { Wrench } from "lucide-react";
 
 export function InputBox({
   className,
@@ -38,6 +40,7 @@ export function InputBox({
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [showTools, setShowTools] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const searchParams = useSearchParams();
@@ -234,6 +237,24 @@ export function InputBox({
               <p>Connected data source</p>
             </TooltipContent>
           </Tooltip>
+          {/* Tools button */}
+          {projectId && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="rounded-2xl px-4 text-sm"
+                  onClick={() => setShowTools(true)}
+                >
+                  <Wrench className="h-4 w-4" />
+                  <span>Tools</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Configure MCP Tools</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Tooltip>
@@ -290,6 +311,9 @@ export function InputBox({
             </div>
           </div>
         </div>
+      )}
+      {showTools && projectId && (
+        <McpToolsDialog open={showTools} onClose={() => setShowTools(false)} projectId={projectId} />
       )}
     </div>
   );
