@@ -15,7 +15,12 @@ import { cn } from "~/core/utils";
 import { Upload as UploadIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { McpToolsDialog } from "./McpToolsDialog";
-import { Wrench } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "~/components/ui/dropdown-menu";
 
 export function InputBox({
   className,
@@ -154,12 +159,26 @@ export function InputBox({
       </div>
       <div className="flex items-center px-4 py-2">
         <div className="flex grow items-center gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                className="rounded-2xl px-4 text-sm border-blue-300 bg-blue-100 text-blue-500 hover:bg-blue-200 hover:text-blue-600"
-                onClick={() => {
+          {/* Combined Upload / Connectors dropdown */}
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="rounded-2xl px-4 text-sm border-blue-300 bg-blue-100 text-blue-500 hover:bg-blue-200 hover:text-blue-600"
+                  >
+                    <UploadIcon className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Options</p>
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem
+                onSelect={() => {
                   if (!projectId) {
                     alert("Please select a project first.");
                     return;
@@ -167,13 +186,21 @@ export function InputBox({
                   setShowUploadModal(true);
                 }}
               >
-                <UploadIcon className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Upload files/folders</p>
-            </TooltipContent>
-          </Tooltip>
+                Upload files
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => {
+                  if (!projectId) {
+                    alert("Please select a project first.");
+                    return;
+                  }
+                  setShowTools(true);
+                }}
+              >
+                Connectors
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -222,39 +249,6 @@ export function InputBox({
               <p>Search before planning</p>
             </TooltipContent>
           </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                disabled
-                className="rounded-2xl px-4 text-sm cursor-default border-green-300 bg-green-100 text-green-600"
-              >
-                <span className="mr-2 size-2 rounded-full bg-green-600" />
-                minio
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Connected data source</p>
-            </TooltipContent>
-          </Tooltip>
-          {/* Tools button */}
-          {projectId && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="rounded-2xl px-4 text-sm"
-                  onClick={() => setShowTools(true)}
-                >
-                  <Wrench className="h-4 w-4" />
-                  <span>Tools</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Configure MCP Tools</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Tooltip>
