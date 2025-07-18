@@ -9,7 +9,7 @@ function sanitize(name: string): string {
     .trim() // a
     .replace(/[\t\n\r]+/g, " ") // b (convert newline & tab to space)
     .replace(/\s+/g, " ") // collapse double spaces
-    .replace(/[./\[\]#~*]+/g, "-") // d (replace . [ ] # ~ * / with dash)
+    .replace(/[\/\[\]#~*]+/g, "-") // d (replace / [ ] # ~ * with dash)
     .replace(/[|'"`]+/g, "") // e remove | ' "
     .replace(/\s+/g, "-"); // convert spaces to dash (keep previous spaces after collapse)
 }

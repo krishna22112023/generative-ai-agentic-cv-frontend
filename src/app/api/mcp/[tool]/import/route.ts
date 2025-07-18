@@ -11,7 +11,7 @@ function sanitize(name: string): string {
     .trim()
     .replace(/[\t\n\r]+/g, " ")
     .replace(/\s+/g, " ")
-    .replace(/[./\[\]#~*]+/g, "-")
+    .replace(/[\/\[\]#~*]+/g, "-")
     .replace(/[|'"`]+/g, "")
     .replace(/\s+/g, "-");
 }

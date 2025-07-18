@@ -23,6 +23,9 @@ function ChatPage() {
   const [project, setProject] = useState<{ id: string; project_name: string; bucket_name?: string; description?: string } | null>(null);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Holds the version id to use when sending messages
+  const [versionId, setVersionId] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const messages = useStore((state) => state.messages);
@@ -30,6 +33,34 @@ function ChatPage() {
 
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
+
+  // ------------------------------
+  // Determine the versionId to use
+  // ------------------------------
+  useEffect(() => {
+    // If the version id is already provided in the URL, just use it
+    const urlVersionId = searchParams.get("versionId");
+    if (urlVersionId) {
+      setVersionId(urlVersionId);
+      return;
+    }
+
+    // Otherwise, try to fetch the latest version for the project.
+    if (!projectId) return;
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/projects/${projectId!}/versions`);
+        if (!res.ok) return;
+        const list: { id: string }[] = await res.json();
+        if (list.length > 0) {
+          setVersionId(list[0]!.id); // latest version comes first
+        }
+      } catch (err) {
+        console.error("Failed to fetch versions", err);
+      }
+    })();
+  }, [searchParams, projectId]);
 
   const handleSendMessage = useCallback(
     async (
@@ -50,14 +81,14 @@ function ChatPage() {
           ...config,
           projectId: project.id,
           projectName: project.project_name,
-          versionId: searchParams.get("versionId"),
+          versionId: versionId,
           bucket: project.bucket_name ?? null,
         },
         { abortSignal: abortController.signal },
       );
       abortControllerRef.current = null;
     },
-    [project, searchParams],
+    [project, versionId],
   );
 
   useInitTeamMembers();
