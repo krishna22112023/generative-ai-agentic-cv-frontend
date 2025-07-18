@@ -14,7 +14,8 @@ import { sendMessage, useInitTeamMembers, useStore } from "~/core/store";
 import { cn } from "~/core/utils";
 
 import { AppHeader } from "./_components/AppHeader";
-import { InputBox } from "./_components/InputBox";
+import { InputBox, type InputBoxHandle } from "./_components/InputBox";
+import { ExamplePrompts } from "./_components/ExamplePrompts";
 import { MessageHistoryView } from "./_components/MessageHistoryView";
 import { SideMenu } from "./_components/SideMenu";
 
@@ -27,6 +28,9 @@ function ChatPage() {
   // Holds the version id to use when sending messages
   const [versionId, setVersionId] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Ref to interact with InputBox
+  const inputBoxRef = useRef<InputBoxHandle>(null);
 
   const messages = useStore((state) => state.messages);
   const responding = useStore((state) => state.responding);
@@ -132,7 +136,7 @@ function ChatPage() {
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <SideMenu open={sidebarOpen} onClose={() => setSidebarOpen(false)} project={project} />
+      <SideMenu open={sidebarOpen} onClose={() => setSidebarOpen(false)} project={project} versionId={versionId} />
       <ScrollArea className="h-screen w-full" ref={scrollAreaRef}>
         <div className="flex min-h-screen flex-col items-center">
           <header className="sticky top-0 right-0 left-0 z-10 flex h-16 w-full items-center px-4 backdrop-blur-sm">
@@ -180,6 +184,7 @@ function ChatPage() {
             )}
             <div className="flex flex-col overflow-hidden rounded-[24px] border bg-white shadow-lg">
               <InputBox
+                ref={inputBoxRef}
                 size={messages.length === 0 ? "large" : "normal"}
                 responding={responding}
                 onSend={handleSendMessage}
@@ -188,6 +193,14 @@ function ChatPage() {
                   abortControllerRef.current = null;
                 }}
               />
+              {/* Example prompts below text box */}
+              {messages.length === 0 && (
+                <ExamplePrompts
+                  onSelect={(prompt) => {
+                    inputBoxRef.current?.setMessage(prompt);
+                  }}
+                />
+              )}
             </div>
             <div className="w-page absolute bottom-[-32px] h-8 backdrop-blur-xs" />
           </footer>

@@ -51,13 +51,13 @@ export default function VersionsPage() {
           </Button>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {versions.map((v) => (
+          {versions.map((v, idx) => (
             <Link
               key={v.id}
               href={{ pathname: "/", query: { projectId, versionId: v.id } }}
               className="flex cursor-pointer flex-col gap-2 rounded-lg border p-4 shadow-sm hover:shadow-md"
             >
-              <h2 className="font-bold">{v.id.slice(0, 8)}</h2>
+              <h2 className="font-bold">{`Version${idx + 1}`}</h2>
               <span className="text-sm text-gray-500 capitalize">{v.trigger}</span>
               <span className="text-sm text-gray-500">{timeAgo(new Date(v.created_at))}</span>
             </Link>

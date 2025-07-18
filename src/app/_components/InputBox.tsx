@@ -1,8 +1,16 @@
 import {
   ArrowUpOutlined,
-  GlobalOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
-import { type KeyboardEvent, useCallback, useEffect, useState, useRef } from "react";
+import {
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useState,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -10,9 +18,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { Atom } from "~/core/icons";
 import { cn } from "~/core/utils";
-import { Upload as UploadIcon } from "lucide-react";
+import { Upload as UploadIcon, Image as ImageIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { McpToolsDialog } from "./McpToolsDialog";
 import {
@@ -20,15 +27,14 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuCheckboxItem,
 } from "~/components/ui/dropdown-menu";
 
-export function InputBox({
-  className,
-  size,
-  responding,
-  onSend,
-  onCancel,
-}: {
+export interface InputBoxHandle {
+  setMessage: (msg: string) => void;
+}
+
+export const InputBox = forwardRef<InputBoxHandle, {
   className?: string;
   size?: "large" | "normal";
   responding?: boolean;
@@ -37,7 +43,16 @@ export function InputBox({
     options: { deepThinkingMode: boolean; searchBeforePlanning: boolean },
   ) => void;
   onCancel?: () => void;
-}) {
+}>((
+  {
+    className,
+    size,
+    responding,
+    onSend,
+    onCancel,
+  },
+  ref,
+) => {
   const [message, setMessage] = useState("");
   const [deepThinkingMode, setDeepThinkMode] = useState(false);
   const [searchBeforePlanning, setSearchBeforePlanning] = useState(false);
@@ -47,9 +62,40 @@ export function InputBox({
   const [uploading, setUploading] = useState(false);
   const [showTools, setShowTools] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [imageCount, setImageCount] = useState<number>(0);
+
+  // Expose imperative handle to allow parent components to set the textarea content
+  useImperativeHandle(ref, () => ({
+    setMessage: (msg: string) => setMessage(msg),
+  }));
 
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
+
+  // Fetch image count whenever projectId changes
+  useEffect(() => {
+    if (!projectId) {
+      setImageCount(0);
+      return;
+    }
+    (async () => {
+      try {
+        const res = await fetch("/api/minio/list", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId, folder: "raw" }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const count = (data.items as { key: string }[]).filter((i) =>
+          i.key.match(/\.(png|jpe?g|gif|bmp|webp)$/i),
+        ).length;
+        setImageCount(count);
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+  }, [projectId]);
 
   const saveConfig = useCallback(() => {
     localStorage.setItem(
@@ -141,6 +187,22 @@ export function InputBox({
 
   return (
     <div className={cn(className)}>
+      {/* Active option tags */}
+      {(deepThinkingMode || searchBeforePlanning) && (
+        <div className="flex gap-2 px-4 pt-2">
+          {deepThinkingMode && (
+            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-600">
+              Deep Think
+            </span>
+          )}
+          {searchBeforePlanning && (
+            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-600">
+              Search
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="w-full">
         <textarea
           className={cn(
@@ -159,7 +221,7 @@ export function InputBox({
       </div>
       <div className="flex items-center px-4 py-2">
         <div className="flex grow items-center gap-2">
-          {/* Combined Upload / Connectors dropdown */}
+          {/* Upload / Connectors dropdown */}
           <DropdownMenu>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -201,54 +263,61 @@ export function InputBox({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn("rounded-2xl px-4 text-sm", {
-                  "border-blue-300 bg-blue-100 text-blue-500 hover:bg-blue-200 hover:text-blue-600":
-                    deepThinkingMode,
-                })}
-                onClick={() => {
-                  setDeepThinkMode(!deepThinkingMode);
-                }}
-              >
-                <Atom className="h-4 w-4" />
-                <span>Deep Think</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>
-                Deep thinking mode. Think before planning.
-                <br />
-                <br />
-                <span className="text-xs text-gray-300">
-                  This feature may cost more tokens and time.
-                </span>
-              </p>
-            </TooltipContent>
-          </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn("rounded-2xl px-4 text-sm", {
-                  "border-blue-300 bg-blue-100 text-blue-500 hover:bg-blue-200 hover:text-blue-600":
-                    searchBeforePlanning,
-                })}
-                onClick={() => {
-                  setSearchBeforePlanning(!searchBeforePlanning);
-                }}
+          {/* Images count button */}
+          {projectId && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="rounded-2xl px-4 text-sm"
+                  onClick={() => {
+                    // In future, could open gallery modal
+                  }}
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  <span className="ml-1">+{imageCount} Images</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Images in raw folder</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          {/* Tools dropdown (Deep Think & Search) */}
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="rounded-2xl px-4 text-sm"
+                  >
+                    <SettingOutlined className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Tools</p>
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="start">
+              <DropdownMenuCheckboxItem
+                checked={deepThinkingMode}
+                onCheckedChange={() => setDeepThinkMode((v) => !v)}
               >
-                <GlobalOutlined className="h-4 w-4" />
-                <span>Search</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Search before planning</p>
-            </TooltipContent>
-          </Tooltip>
+                Deep Think
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={searchBeforePlanning}
+                onCheckedChange={() => setSearchBeforePlanning((v) => !v)}
+              >
+                Search
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {/* END buttons group */}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Tooltip>
@@ -311,4 +380,6 @@ export function InputBox({
       )}
     </div>
   );
-}
+});
+
+InputBox.displayName = "InputBox";
