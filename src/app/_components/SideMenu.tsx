@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import { X } from "lucide-react";
 import { cn } from "~/core/utils";
@@ -125,30 +127,39 @@ export function SideMenu({ open, onClose, project, versionId }: SideMenuProps) {
         </div>
         <div className="flex flex-col gap-2">
           {project ? (
-            <Button variant="outline" className="w-full" onClick={onClose} asChild>
-              <Link href={{ pathname: `/projects/${project.id}/visualize`, query: { projectId: project.id } }}>
-                Visualize
-              </Link>
-            </Button>
-          ) : (
-            <Button variant="outline" className="w-full" disabled>
+            <Link
+              href={{ pathname: `/projects/${project.id}/visualize`, query: { projectId: project.id } }}
+              onClick={onClose}
+              className="w-full rounded border px-3 py-2 text-center text-sm hover:bg-gray-200"
+            >
               Visualize
-            </Button>
+            </Link>
+          ) : (
+            <span className="w-full rounded border px-3 py-2 text-center text-sm text-gray-400">Visualize</span>
+          )}
+
+          {project ? (
+            <Link
+              href={{ pathname: `/projects/${project.id}/versions`, query: { projectId: project.id } }}
+              onClick={onClose}
+              className="w-full rounded border px-3 py-2 text-center text-sm hover:bg-gray-200"
+            >
+              Versions
+            </Link>
+          ) : (
+            <span className="w-full rounded border px-3 py-2 text-center text-sm text-gray-400">Versions</span>
           )}
           {project ? (
-            <Button variant="outline" className="w-full" onClick={onClose} asChild>
-              <Link href={{ pathname: `/projects/${project.id}/versions`, query: { projectId: project.id } }}>
-                Versions
-              </Link>
-            </Button>
+            <Link
+              href={{ pathname: `/projects/${project.id}/analytics`, query: { projectId: project.id } }}
+              onClick={onClose}
+              className="w-full rounded border px-3 py-2 text-center text-sm hover:bg-gray-200"
+            >
+              Analytics
+            </Link>
           ) : (
-            <Button variant="outline" className="w-full" disabled>
-              Versions
-            </Button>
+            <span className="w-full rounded border px-3 py-2 text-center text-sm text-gray-400">Analytics</span>
           )}
-          <Button variant="outline" className="w-full">
-            Analytics
-          </Button>
         </div>
       </div>
     </aside>

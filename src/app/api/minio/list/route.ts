@@ -6,7 +6,7 @@ import { query } from "~/lib/db";
 
 const bodySchema = z.object({
   projectId: z.string().uuid(),
-  folder: z.enum(["raw", "processed", "annotated"]).default("raw"),
+  folder: z.enum(["raw", "processed", "annotated", "artefacts"]).default("raw"),
 });
 
 export async function POST(req: NextRequest) {
