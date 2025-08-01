@@ -1,37 +1,55 @@
-# AgenticVision Web UI
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<p align="center">
+  <h1 align="center">AgenticVision Web UI</h1>
+  <p align="center">
+    <a href="https://react.dev/" target="_blank">
+      <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
+    </a>
+    <a href="https://nodejs.org/" target="_blank">
+      <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
+    </a>
+    <a href="https://pnpm.io/" target="_blank">
+      <img src="https://img.shields.io/badge/pnpm-222222?style=for-the-badge&logo=pnpm&logoColor=F69220" alt="pnpm" />
+    </a>
+    <a href="https://nextjs.org/" target="_blank">
+      <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" />
+    </a>
+  </p>
+</p>
 
-**The default Web UI for [AgenticVision](https://github.com/krishna22112023/generative-ai-agentic-cv-base.git).**
+**The default Web UI for [AgenticVision](https://github.com/AI-DA-STC/generative-ai-agentic-cv-base.git).**
 
-The goal of this project is to create a computer vision AI AGents Platform for the netire CV model lifecycle through four integrated capability domains including CV AI Agent capabilities, Data management, CV Modelling and model deployment.
+## Tech stack
 
-## Demo
+![](public/tech_stack.jpg)
 
-![demo](https://github.com/langmanus/langmanus/blob/main/assets/demo.gif?raw=true)
-
-## Table of Contents
-
-- [Quick Start](#quick-start)
-- [Docker](#docker)
-- [Project Statement](#project-statement)
-- [Contributing](#contributing)
-- [License](#license)
-- [Acknowledgments](#acknowledgments)
 
 ## Quick Start
 
 ### Prerequisites
 
-- [AgenticVision](https://github.com/krishna22112023/generative-ai-agentic-cv-base.git)
+- [AgenticVision](https://github.com/AI-DA-STC/generative-ai-agentic-cv-base.git)
 - Node.js (v22.14.0+)
 - pnpm (v10.6.2+) as package manager
+- minio as object storage
+- clerk and Oauth2 for authentication
+- postgres for metadata storage
 
 ### Configuration
 
 Create a `.env` file in the project root and configure the following environment variables:
 
-- `NEXT_PUBLIC_API_URL`: The URL of the LangManus API.
+- `NEXT_PUBLIC_API_URL`: The URL of the API.
+- `CLERK_SECRET_KEY`: Clerk authentication secret key.  
+- `DATABASE_URL`: Database connection string.  
+- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`: AWS credentials for S3 storage. In my case, I used minio as my object storage.  
+- `AWS_ENDPOINT_URL`: Custom endpoint for AWS S3-compatible storage.  
+- `AWS_BUCKET_NAME`: Name of the S3 bucket for uploads.  
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: Google OAuth credentials.  
+- `NEXT_PUBLIC_GOOGLE_API_KEY`: Public Google API key for client-side use.  
+- `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET`: Slack OAuth credentials.  
+- `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`: GitHub OAuth credentials.  
+
 
 It's always a good idea to start with the given example file, and edit the `.env` file with your own values:
 
@@ -41,7 +59,7 @@ cp .env.example .env
 
 ### Installation
 
-**IMPORTANT: First, **start the Python server**, see [LangManus](https://github.com/langmanus/langmanus) for more details.**
+**IMPORTANT: First, **start the Python server**, see [AgenticVision](https://github.com/AI-DA-STC/generative-ai-agentic-cv-base.git) for more details.**
 
 ```bash
 # Clone the repository
@@ -92,3 +110,7 @@ docker compose build
 # start the server
 docker compose up
 ```
+
+### Acknowledgements 
+
+This repo is inspired from [langmanus/langmanus-web-ui](https://github.com/Darwin-lfl/langmanus.git).
